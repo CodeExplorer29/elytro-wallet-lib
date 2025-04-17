@@ -602,54 +602,77 @@ export class Vault implements IVault {
         return ret;
     }
 
-    // /**
-    //  * sign typedData message (EIP712)
-    //  *
-    //  * @param {string} address
-    //  * @param {ethers.TypedDataDomain} domain
-    //  * @param {Record<string, Array<ethers.TypedDataField>>} types
-    //  * @param {Record<string, any>} value
-    //  * @param {(string | ethers.JsonRpcProvider)} [provider]
-    //  * @return {*}  {Promise<Result<string, Error>>}
-    //  * @memberof Vault
-    //  */
-    // // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // public async typedDataSign(path: string | undefined, domain: ethers.TypedDataDomain, types: Record<string, Array<ethers.TypedDataField>>, value: Record<string, any>, provider?: string | ethers.JsonRpcProvider): Promise<Result<SignData, Error>> {
-    //     // refer: ethers.js
+    /**
+     * sign typedData message (EIP712)
+     *
+     * @param {string} path
+     * @param {ethers.TypedDataDomain} domain
+     * @param {Record<string, Array<ethers.TypedDataField>>} types
+     * @param {Record<string, any>} value
+     * @param {(string | ethers.JsonRpcProvider)} [provider]
+     * @return {*}  {Promise<Result<SignData, Error>>}
+     * @memberof Vault
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    public async typedDataSign(path: string | undefined, domain: ethers.TypedDataDomain, types: Record<string, Array<ethers.TypedDataField>>, value: Record<string, any>, provider?: string | ethers.JsonRpcProvider): Promise<Result<SignData, Error>> {
+        // First check if we're locked
+        const _ECDSA = await this._loadSigner(path);
+        if (_ECDSA.isErr() === true) {
+            return new Err(_ECDSA.ERR);
+        }
 
-    //     let _provider: ethers.JsonRpcProvider | null = null;
-    //     if (provider !== undefined) {
-    //         if (typeof provider === 'string') {
-    //             _provider = new ethers.JsonRpcProvider(provider);
-    //         } else {
-    //             _provider = provider;
-    //         }
-    //     }
+        const _address = _ECDSA.OK.address;
+        const _path = _ECDSA.OK.path;
 
-    //     // Populate any ENS names
-    //     const populated = await ethers.TypedDataEncoder.resolveNames(domain, types, value, async (name: string) => {
-    //         // @TODO: this should use resolveName; addresses don't
-    //         //        need a provider
+        try {
+            // Set up provider if provided
+            let _provider: ethers.JsonRpcProvider | null = null;
+            if (provider !== undefined) {
+                if (typeof provider === 'string') {
+                    _provider = new ethers.JsonRpcProvider(provider);
+                } else {
+                    _provider = provider;
+                }
+            }
 
-    //         ethers.assert(_provider != null, "cannot resolve ENS names without a provider", "UNSUPPORTED_OPERATION", {
-    //             operation: "resolveName",
-    //             info: { name }
-    //         });
+            // Populate any ENS names (following ethers implementation)
+            const populated = await ethers.TypedDataEncoder.resolveNames(domain, types, value, async (name: string) => {
+                // @TODO: this should use resolveName; addresses don't
+                //        need a provider
 
-    //         const address = await _provider!.resolveName(name);
-    //         ethers.assert(address != null, "unconfigured ENS name", "UNCONFIGURED_NAME", {
-    //             value: name
-    //         });
+                ethers.assert(_provider != null, "cannot resolve ENS names without a provider", "UNSUPPORTED_OPERATION", {
+                    operation: "resolveName",
+                    info: { name }
+                });
 
-    //         return address;
-    //     });
+                const address = await _provider.resolveName(name);
+                ethers.assert(address != null, "unconfigured ENS name", "UNCONFIGURED_NAME", {
+                    value: name
+                });
 
-    //     const message = ethers.TypedDataEncoder.hash(populated.domain, types, populated.value);
-    //     const ret = await this._rawSign(path, message);
-    //     if (ret.isOk() === true) {
-    //         this.emit('TypedDataSign', ret.OK);
-    //     }
-    //     return ret;
-    // }
+                return address;
+            });
+
+            // Get the hash and sign it
+            const hash = ethers.TypedDataEncoder.hash(populated.domain, types, populated.value);
+            const signature = await _ECDSA.OK.sign(hash);
+
+            // Create and return the SignData
+            const _signData: SignData = {
+                address: _address,
+                path: _path,
+                message: hash,
+                signature: signature
+            };
+
+            return new Ok(_signData);
+        } catch (error) {
+            if (error instanceof Error) {
+                return new Err(error);
+            } else {
+                return new Err(new Error('unknown error'));
+            }
+        }
+    }
 
 }
