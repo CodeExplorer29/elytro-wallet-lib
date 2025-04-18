@@ -289,21 +289,30 @@ describe('SDK', () => {
     });
 
     test('userOpHash', async () => {
-        const packedUserOp: PackedUserOperation = {
-            sender: "0x123456789abcdef0123456789abcdef012345678",
-            nonce: '0x01',
-            initCode: '0xa10000000000000000000000000000000000000002',
-            callData: '0x03',
-            accountGasLimits: '0x000000000000000000000000000000a2000000000000000000000000000000a1',
-            preVerificationGas: '0xa3',
-            gasFees: '0x000000000000000000000000000000a5000000000000000000000000000000a4',
-            paymasterAndData: '0xaa3456789abcdef0123456789abcdef012345678000000000000000000000000000000a6000000000000000000000000000000a7a8',
-            signature: '0xb0'
+        // using random test data from etherscan https://etherscan.io/tx/0x89e3885d18b2b168fc9c74e3cec6c996df04f8a041f500257f8678b9b71c0122
+        const userOp: UserOperation = {
+            sender: "0x1D9d308f82BD5D1f17ED3422F8F62Aa392628f98",
+            nonce: "69868999312210916382040797910398800922795656671448965136517056063466691887104",
+            factory: null,
+            factoryData: null,
+            callData: "0xb61d27f6000000000000000000000000ffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000000",
+            callGasLimit: 17955,
+            verificationGasLimit: 77552,
+            preVerificationGas: 55510,
+            maxFeePerGas: 604219413,
+            maxPriorityFeePerGas: 471900,
+            paymaster: "0x888888888888Ec68A58AB8094Cc1AD20Ba3D2402",
+            paymasterVerificationGasLimit: 60000,
+            paymasterPostOpGasLimit: 20000,
+            paymasterData: "0x01000067ef9312000000000000c690f284e7f9996172b6bcff9d0c864425210822a048182606dbdfa234a515695d378a1b93e53080630b02fc6bbe14aecced6516d48eab0097e46aaf5db0cb8f1c",
+            signature: "0xc3921917432f4e3c16ace0299d0573594d7b180070db5fdb6d8596447af162124e7b940b9ef259e5727fe38d8f72d36d1478a7a38cf99620fb7004b7bcb296ed1b"
         };
 
-        const entrypointAddress = '0x0000000071727De22E5E9d8BAf0edAc6f37da032';
+        const packedUserOp = UserOpUtils.packUserOp(userOp);
+
+        const entrypointAddress = '0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108';
         const chainId = 1;
-        const userOpHash = '0xb52cfcae9bba87f372db89cc6e43d71d53f304be0cbda3db9f28c4d93c37949d';
+        const userOpHash = '0x89e3885d18b2b168fc9c74e3cec6c996df04f8a041f500257f8678b9b71c0122';
         {
             const _userOpHash = UserOpUtils.getUserOpHash(packedUserOp, entrypointAddress, chainId);
             expect(_userOpHash).toBe(userOpHash);
@@ -313,7 +322,6 @@ describe('SDK', () => {
             const _userOpHash = UserOpUtils.getUserOpHash(userOp, entrypointAddress, chainId);
             expect(_userOpHash).toBe(userOpHash);
         }
-
     });
     // test('calcWalletAddress', async () => {
     //     const soulwallet = new ElytroWallet(
